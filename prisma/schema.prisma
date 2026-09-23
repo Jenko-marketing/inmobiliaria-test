@@ -1,0 +1,133 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Nota: se usan String en vez de enum/arrays por compatibilidad con el
+// esquema original (pensado para SQLite); en Postgres funcionan igual. Varios
+// campos que en producción (Postgres) serían enum/array acá son String
+// (documentado con los valores válidos en el comentario) o JSON serializado.
+
+model Property {
+  id          String   @id @default(cuid())
+  slug        String   @unique
+  title       String
+  address     String
+  city        String
+  type        String // CASA | DEPARTAMENTO | LOCAL | TERRENO | OTRO
+  operation   String // VENTA | ALQUILER
+  price       Float
+  currency    String   @default("USD")
+  status      String   @default("DISPONIBLE") // DISPONIBLE | RESERVADA | VENDIDA | ALQUILADA
+  bedrooms    Int?
+  bathrooms   Int?
+  areaM2      Int?
+  description String
+  coverImage  String
+  images      String // JSON string array de URLs
+  panoramaUrl String?
+  featured    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  rentalContract RentalContract?
+  leads          Lead[]
+
+  @@index([operation, status])
+}
+
+model Lead {
+  id                 String   @id @default(cuid())
+  name               String
+  phone              String
+  source             String   @default("WhatsApp")
+  status             String   @default("NUEVO") // NUEVO | CALIFICANDO | CALIFICADO | DERIVADO | DESCARTADO | CONVERTIDO
+  interest           String?
+  budget             String?
+  propertyId         String?
+  property           Property? @relation(fields: [propertyId], references: [id])
+  qualificationNotes String?
+  assignedAgent      String?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  conversationId String?       @unique
+  conversation   Conversation? @relation(fields: [conversationId], references: [id])
+}
+
+model RentalContract {
+  id          String   @id @default(cuid())
+  propertyId  String   @unique
+  property    Property @relation(fields: [propertyId], references: [id])
+  tenantName  String
+  tenantPhone String
+  monthlyRent Float
+  currency    String   @default("USD")
+  dueDay      Int
+  startDate   DateTime
+  status      String   @default("ACTIVO")
+  createdAt   DateTime @default(now())
+
+  bills UtilityBill[]
+}
+
+model UtilityBill {
+  id               String         @id @default(cuid())
+  rentalContractId String
+  rentalContract   RentalContract @relation(fields: [rentalContractId], references: [id])
+  type             String // LUZ | AGUA | EXPENSAS | GAS | INTERNET | OTRO
+  period           String // "2026-09"
+  amount           Float?
+  dueDate          DateTime
+  status           String    @default("PENDIENTE") // PENDIENTE | PAGADO | VENCIDO
+  paidAt           DateTime?
+  proofUrl         String?
+  reminderSentAt   DateTime?
+  createdAt        DateTime  @default(now())
+
+  @@index([rentalContractId, status])
+}
+
+model Conversation {
+  id           String   @id @default(cuid())
+  contactName  String
+  contactPhone String
+  channel      String   @default("WhatsApp")
+  kind         String // INQUILINO | VENTA
+  status       String   @default("ABIERTA") // ABIERTA | ESPERANDO_HUMANO | ATENDIDA | CERRADA
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  messages Message[]
+  lead     Lead?
+}
+
+model Message {
+  id             String       @id @default(cuid())
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id])
+  direction      String // IN | OUT
+  type           String       @default("TEXT") // TEXT | IMAGE
+  content        String
+  createdAt      DateTime     @default(now())
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  title     String
+  body      String
+  kind      String // PAGO_RECIBIDO | LEAD_CALIFICADO | VENCIMIENTO_PROXIMO
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
+
+model AdminUser {
+  id           String @id @default(cuid())
+  email        String @unique
+  passwordHash String
+  name         String
+}
