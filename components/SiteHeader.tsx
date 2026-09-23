@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Building2 } from "lucide-react";
+import Image from "next/image";
 import { SITE_NAME } from "@/lib/site";
 
 export function SiteHeader() {
@@ -7,9 +7,7 @@ export function SiteHeader() {
     <header className="sticky top-0 z-30 border-b border-brand-gray-200 bg-white/90 backdrop-blur">
       <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4 sm:px-6">
         <Link href="/" className="flex items-center gap-2">
-          <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-brand-red text-white">
-            <Building2 size={18} />
-          </span>
+          <Image src="/logo.png" alt={SITE_NAME} width={40} height={40} className="h-10 w-10" />
           <span className="text-lg font-bold tracking-tight text-brand-gray-900">
             {SITE_NAME}
           </span>
